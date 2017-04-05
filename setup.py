@@ -1,4 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from setuptools import setup
+from setuptools import setup, find_packages
 
 
 # Remove build status and move Gitter link under title for PyPi
@@ -13,7 +16,7 @@ setup(
     version='0.0.0',
     author='Chris Seto',
     author_email='chriskseto@gmail.com',
-    description='ORM extensions for performance minded perfectionist',
+    description='ORM extensions for performance conscious perfectionist',
     # long_description=README,
     long_description='',
     url='http://github.com/chrisseto/django-include',
@@ -22,11 +25,13 @@ setup(
         'include',
     ],
     install_requires=[
-        # 'django>=1.7',
+        'ujson',
+        'psycopg2',
+        'ciso8601',
+        'django>=1.9',
     ],
     classifiers=[
         # 'Development Status :: 5 - Production/Stable',
-        # 'License :: OSI Approved :: BSD License',
         # 'Operating System :: OS Independent',
         # 'Programming Language :: Python',
         # 'Programming Language :: Python :: 2',

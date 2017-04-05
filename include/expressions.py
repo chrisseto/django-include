@@ -9,4 +9,4 @@ class JSONBuildArray(Func):
         super(JSONBuildArray, self).__init__(*args, output_field=JSONField(), **kwargs)
 
     def as_sqlite(self, compiler, connection, **extra_context):
-        return super().as_sql(compiler, connection, function='JSON_ARRAY', **extra_context)
+        return self.as_sql(compiler, connection, function='JSON_ARRAY', **extra_context)

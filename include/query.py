@@ -2,7 +2,6 @@ from collections import OrderedDict
 import json
 
 import ciso8601
-import psycopg2
 
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
@@ -17,6 +16,11 @@ try:
     import ujson as json
 except ImportError:
     import json
+
+try:
+    STR_TYPE = basestring
+except NameError:
+    STR_TYPE = str
 
 
 class IncludeModelIterable(ModelIterable):
@@ -56,13 +60,16 @@ class IncludeModelIterable(ModelIterable):
 
             ps.append(parsed)
 
-        if field.many_to_one and ps[0]:
+        if field.many_to_one and ps:
             return setattr(instance, field.get_cache_name(), ps[0])
 
         if not hasattr(instance, '_prefetched_objects_cache'):
             instance._prefetched_objects_cache = {}
-        instance._prefetched_objects_cache[field.name] = field.related_model.objects.none()
+
+        # get_queryset() sets a bunch of attributes for us and will respect any custom managers
+        instance._prefetched_objects_cache[field.name] = getattr(instance, field.get_accessor_name()).get_queryset()
         instance._prefetched_objects_cache[field.name]._result_cache = ps
+        instance._prefetched_objects_cache[field.name]._prefetch_done = True
 
     @classmethod
     def parse_includes(cls, instance, fields):
@@ -70,7 +77,7 @@ class IncludeModelIterable(ModelIterable):
             data = getattr(instance, '__' + field.name)
             delattr(instance, '__' + field.name)
             # SQLite doesn't auto parse JSON
-            if isinstance(data, str):
+            if isinstance(data, STR_TYPE):
                 data = json.loads(data)
             cls.parse_nested(instance, field, nested, data)
 
@@ -94,8 +101,13 @@ class IncludeQuerySet(models.QuerySet):
 
     def include(self, *related_names, **kwargs):
         clone = self._clone()
+
         clone._include_limit = kwargs.pop('limit_includes', None)
         assert not kwargs, '"limit_includes" is the only accepted kwargs. Eat your heart out 2.7'
+
+        if related_names == (None, ):
+            clone._includes.clear()
+            return clone
 
         # Parse everything the way django handles joins/select related
         # Including multiple child fields ie .include(field1__field2, field1__field3)
