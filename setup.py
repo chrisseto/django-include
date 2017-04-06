@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from setuptools import setup
-from setuptools import setup, find_packages
 
 
 # Remove build status and move Gitter link under title for PyPi
