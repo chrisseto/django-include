@@ -1,7 +1,5 @@
 import pytest
 
-from django.db.models.aggregates import Count
-
 from tests import models
 from tests import factories
 
