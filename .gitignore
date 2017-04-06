@@ -95,3 +95,6 @@ celerybeat-schedule
 
 # dotenv
 .env
+
+# built readme
+README.html
