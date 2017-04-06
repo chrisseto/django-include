@@ -16,7 +16,7 @@ setup(
     version='0.0.0',
     author='Chris Seto',
     author_email='chriskseto@gmail.com',
-    description='ORM extensions for performance conscious perfectionist',
+    description='ORM extensions for performance conscious perfectionists.',
     # long_description=README,
     long_description='',
     url='http://github.com/chrisseto/django-include',
