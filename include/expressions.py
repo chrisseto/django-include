@@ -1,5 +1,5 @@
 from django.contrib.postgres.fields import JSONField
-from django.db.models.expressions import Func, Expression
+from django.db.models.expressions import Func
 
 
 class JSONBuildArray(Func):
