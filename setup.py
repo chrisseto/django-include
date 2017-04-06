@@ -3,11 +3,10 @@
 from setuptools import setup
 
 
-# Remove build status and move Gitter link under title for PyPi
-# README = open('README.md').read()    \
-#     .replace('|Build Status|', '', 1) \
-#     .replace('|Gitter|', '', 1)       \
-#     .replace('===\n', '===\n\n|Gitter|\n')
+def read(fname):
+    with open(fname) as fp:
+        content = fp.read()
+    return content
 
 
 setup(
@@ -16,8 +15,7 @@ setup(
     author='Chris Seto',
     author_email='chriskseto@gmail.com',
     description='ORM extensions for performance conscious perfectionists.',
-    # long_description=README,
-    long_description='',
+    long_description=read('README.rst'),
     url='http://github.com/chrisseto/django-include',
     license='MIT',
     packages=[
