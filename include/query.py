@@ -66,7 +66,12 @@ class IncludeModelIterable(ModelIterable):
             instance._prefetched_objects_cache = {}
 
         # get_queryset() sets a bunch of attributes for us and will respect any custom managers
-        instance._prefetched_objects_cache[field.name] = getattr(instance, field.get_accessor_name()).get_queryset()
+        if isinstance(field, GenericRelation):
+            accessor_name = field.name
+        else:
+            accessor_name = field.get_accessor_name()
+
+        instance._prefetched_objects_cache[field.name] = getattr(instance, accessor_name).get_queryset()
         instance._prefetched_objects_cache[field.name]._result_cache = ps
         instance._prefetched_objects_cache[field.name]._prefetch_done = True
 
@@ -168,7 +173,7 @@ class IncludeQuerySet(models.QuerySet):
         # because SQL
         kwargs = {}
         if qs.ordered:
-            kwargs['order_by'] = zip(*qs.query.get_compiler(using=self.db).get_order_by())[0]
+            kwargs['order_by'] = next(zip(*qs.query.get_compiler(using=self.db).get_order_by()))
         qs.query.clear_ordering(True)
 
         where = ['{table}."{column}" = {host_table}."{host_column}"'.format(

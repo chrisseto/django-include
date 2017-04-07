@@ -161,6 +161,15 @@ class TestForeignKey:
     pass
 
 
-@pytest.mark.skip
+@pytest.mark.django_db
 class TestGenericForeignKey:
-    pass
+
+    def test_reverse_gfk(self, django_assert_num_queries):
+        cat = factories.CatFactory()
+
+        for _ in range(7):
+            factories.AliasFactory(describes=cat)
+
+        with django_assert_num_queries(1):
+            ket = models.Cat.objects.include('aliases').get(pk=cat.id)
+            assert len(ket.aliases.all()) == 7
