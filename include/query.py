@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import ciso8601
 
+from django.utils.six.moves import zip
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
