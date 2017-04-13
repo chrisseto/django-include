@@ -2,6 +2,9 @@
 Django Include
 **************
 
+.. image:: https://travis-ci.org/chrisseto/django-include.svg?branch=master
+    :target: https://travis-ci.org/chrisseto/django-include
+
 ORM extensions for performance-conscious perfectionists.
 
 Django-include provides `select_related` functionality for Many-to-X relation.
