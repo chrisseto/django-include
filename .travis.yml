@@ -17,4 +17,4 @@ env:
 install:
   - travis_retry pip install -U virtualenv tox tox-travis
 
-script: TOX_TESTENV_PASSENV="DATABASE_PORT=5432" tox
+script: tox
