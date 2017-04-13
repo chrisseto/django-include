@@ -44,6 +44,10 @@ Subclass `IncludeQuerySet`:
 .. code-block:: python
 
   from include import IncludeQuerySet
+  
+  class CustomQuerySet(IncludeQuerySet):
+      def custom_method(self):
+          pass
 
   class BlogPost(models.Model):
       objects = CustomQuerySet.as_manager()
