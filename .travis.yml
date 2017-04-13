@@ -16,6 +16,7 @@ env:
     - DATABASE_PORT="54321"
   matrix:
     - DJANGO=1.9
+    - DJANGO=1.10
     - DJANGO=1.11
 
 install:
