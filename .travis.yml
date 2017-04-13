@@ -1,0 +1,23 @@
+language: python
+
+python:
+  - 3.6
+
+sudo: false
+
+env:
+  - TOX_ENV=py27-django19
+  - TOX_ENV=py27-django111
+
+  - TOX_ENV=py35-django19
+  - TOX_ENV=py35-django111
+
+  - TOX_ENV=py36-django19
+  - TOX_ENV=py36-django111
+
+
+install:
+  - pip install -U virtualenv tox
+
+script:
+  - tox -e $TOX_ENV
