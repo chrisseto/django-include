@@ -1,0 +1,20 @@
+language: python
+
+addons:
+  postgresql: "9.6"
+
+python:
+  - "3.6"
+  - "3.5"
+  - "2.7"
+
+sudo: false
+
+env:
+  - DJANGO=1.9
+  - DJANGO=1.11
+
+install:
+  - travis_retry pip install -U virtualenv tox tox-travis
+
+script: TOX_TESTENV_PASSENV="DATABASE_PORT=5432" tox

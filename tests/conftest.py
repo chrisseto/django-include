@@ -6,4 +6,3 @@ def pytest_configure(config):
             return
         else:
             config.option.usepdb_cls = 'IPython.core.debugger:Pdb'
-
