@@ -1,7 +1,5 @@
 language: python
-
-addons:
-  postgresql: "9.6"
+sudo: false
 
 python:
   - "3.6"
@@ -11,10 +9,35 @@ python:
 sudo: false
 
 env:
-  - DJANGO=1.9
-  - DJANGO=1.11
+  global:
+    - POSTGRES_DEB="postgresql-9.6_9.6.2-1.pgdg12.4+1_amd64.deb"
+      # Need to run on non-default port; otherwise we use Travis's default
+      # postgres installation
+    - DATABASE_PORT="54321"
+  matrix:
+    - DJANGO=1.9
+    - DJANGO=1.11
 
 install:
   - travis_retry pip install -U virtualenv tox tox-travis
+
+before_install:
+  # install and run postgres
+  - |
+    cd $HOME/.cache/downloads
+
+    if [ ! -f "$POSTGRES_DEB" ]; then
+      curl -SLO http://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-9.6/$POSTGRES_DEB
+    fi
+    dpkg -x $POSTGRES_DEB /tmp/postgres
+  - |
+    /tmp/postgres/usr/lib/postgresql/9.6/bin/initdb /tmp/postgres/data --nosync -U postgres
+    sed -i -e 's/#fsync.*/fsync = off/' /tmp/postgres/data/postgresql.conf
+    sed -i -e 's/#synchronous_commit.*/synchronous_commit = off/' /tmp/postgres/data/postgresql.conf
+    sed -i -e 's/#full_page_writes.*/full_page_writes = off/' /tmp/postgres/data/postgresql.conf
+    /tmp/postgres/usr/lib/postgresql/9.6/bin/postgres -k /tmp -D /tmp/postgres/data -p $DATABASE_PORT > /dev/null & export POSTGRES_PID=$!
+
+before_cache:
+  - kill -9 $POSTGRES_PID
 
 script: tox
