@@ -13,7 +13,7 @@ Django-include provides ``select_related`` functionality for Many-to-X relations
 Requirements
 ============
 
-Python 2.7 or 3.4+, Django 1.9+, and any SQL server with support for JSON aggregations.
+Python 2.7 or 3.5+, Django 1.9+, and any SQL server with support for JSON aggregations.
 
 Currently tested against Postgres 9.6. May work with SQLite with the JSON1 extension.
 
