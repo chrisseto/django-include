@@ -42,3 +42,12 @@ before_cache:
   - kill -9 $POSTGRES_PID
 
 script: tox
+
+deploy:
+  provider: pypi
+  user: cos
+  password:
+    secure: o0x3QFFjsQZkchCA17wWdQbWpphhGDyEhWbiGdq1t5p9SDqqsQgzNKdLgVf13QnnkA2HP1RXex81POtZ/Idz52EWn3540/Yx8zFTXnyFN0GZcJqcmm8NIAB7cMjbNuDeQMQDW6VduElRDWJeikMN3dGARVVAqC4Xs4vf8uWcGeIuOcdy1d5wV2avLyXJgi1UDxAjXxHpDxfUKtKv6/w0NCcRgRf5Z6poLTRxyRZkYD2mkEDcXa1NfmSdBOv+pJlMyC17W9vPi+fiDntxnem1vfpjlr3g0MLIDtVUvnLU0XS//o7oJWUHEhXn6jmsbDl3RJ2N8XrV87LpfQTzR3b8q3iXxmD7Pqmv6VtZdxBrOaaVLiWK3idT70a/JswBzyyzeYiB0NdAvizjccg6NEJ0XLrzSFQErpB16hV8jMPkjhHrJvlMYbgiMQruvqIYAjxWt+nHMEwx03GngPF9xVWrPI1p61GSDZhEBDsspXF1yBCldOP3neqgmMrkC2oVHcIOrfQTpzyLiRehfVa2UTPTqA3zT9LPrxVRXaikKOslrfvlf26k7ntQqz6ItRNTX6BC0x2Mfi0Ns1umcLkIJrRLxWINSImxY3w07O4Kn8dsKX+uzsDTmpQ2DcLdK4pn3BL6gxAx6Rk5M3hB8qXVbwO3noSSzAymdNELcqS/WfBXhxE=
+  on:
+    tags: true
+  distributions: "sdist bdist_wheel"
