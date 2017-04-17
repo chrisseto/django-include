@@ -14,7 +14,3 @@ flake8==3.3.0
 # Utilities
 ipdb
 ipython
-
-# Distribution
-wheel
-twine

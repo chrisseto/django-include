@@ -7,7 +7,7 @@ Django Include
 
 ORM extensions for performance-conscious perfectionists.
 
-Django-include provides `select_related` functionality for Many-to-X relation.
+Django-include provides ``select_related`` functionality for Many-to-X relations.
 
 
 Requirements
@@ -15,7 +15,7 @@ Requirements
 
 Python 2.7 or 3.4+, Django 1.9+, and any SQL server with support for JSON aggregations.
 
-Currently tested against Postgres. May work with SQLite with the JSON1 extension.
+Currently tested against Postgres 9.6. May work with SQLite with the JSON1 extension.
 
 
 Installation
@@ -44,7 +44,7 @@ Subclass `IncludeQuerySet`:
 .. code-block:: python
 
   from include import IncludeQuerySet
-  
+
   class CustomQuerySet(IncludeQuerySet):
       def custom_method(self):
           pass
@@ -85,8 +85,8 @@ If this endpoint were to be implemented using just Django's ORM, it would end up
 
 .. code-block:: python
 
-    project = Project.objects.get(pk=id)  # 1 Query!
-    for contributor in project.contributors.select_related('users'):  # 1 Query!
+    project = Project.objects.get(pk=id)  # 1 Query
+    for contributor in project.contributors.select_related('users'):  # 1 Query
         [x for x in contributor.user.emails.all()]  # N * M Queries!
         # Some serialization code
 
@@ -98,8 +98,8 @@ Or you could just use `.include`, do a single query, and not have to explain all
 
 .. code-block:: python
 
-    project = Project.objects.include('contributors__user__emails')  # 1 Query!
-        for contributor in project.contributors.all():  # Already loaded
+    project = Project.objects.include('contributors__user__emails')  # 1 Query
+    for contributor in project.contributors.all():  # Already loaded
         [x for x in contributor.user.emails.all()]  # Already loaded
         # Some serialization code
 
