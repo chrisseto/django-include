@@ -1,26 +1,12 @@
 from collections import OrderedDict
 
-import ciso8601
-
 from django.utils.six.moves import zip
-from django.contrib.contenttypes.fields import GenericRelation
-from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from django.db.models.expressions import RawSQL
 from django.db.models.query import ModelIterable
+from django.db.models.fields.reverse_related import ForeignObjectRel
 
-from include.aggregations import JSONAgg
-from include.expressions import JSONBuildArray
-
-try:
-    import ujson as json
-except ImportError:
-    import json
-
-try:
-    STR_TYPE = basestring
-except NameError:
-    STR_TYPE = str
+from include import util
+from include.expressions import IncludeExpression
 
 
 class IncludeModelIterable(ModelIterable):
@@ -46,8 +32,7 @@ class IncludeModelIterable(ModelIterable):
             data, nested_data = data[:-len(nested) or None], data[-len(nested):]
 
             for i in dts:
-                if data[i]:
-                    data[i] = ciso8601.parse_datetime(data[i])
+                data[i] = util.parse_datetime(data[i])
 
             # from_db expects the final argument to be a tuple of fields in the order of concrete_fields
             parsed = field.related_model.from_db(instance._state.db, None, data)
@@ -66,12 +51,12 @@ class IncludeModelIterable(ModelIterable):
         if not hasattr(instance, '_prefetched_objects_cache'):
             instance._prefetched_objects_cache = {}
 
-        # get_queryset() sets a bunch of attributes for us and will respect any custom managers
-        if isinstance(field, GenericRelation):
-            accessor_name = field.name
-        else:
+        if hasattr(field, 'get_accessor_name'):
             accessor_name = field.get_accessor_name()
+        else:
+            accessor_name = field.name
 
+        # get_queryset() sets a bunch of attributes for us and will respect any custom managers
         instance._prefetched_objects_cache[field.name] = getattr(instance, accessor_name).get_queryset()
         instance._prefetched_objects_cache[field.name]._result_cache = ps
         instance._prefetched_objects_cache[field.name]._prefetch_done = True
@@ -82,8 +67,8 @@ class IncludeModelIterable(ModelIterable):
             data = getattr(instance, '__' + field.name)
             delattr(instance, '__' + field.name)
             # SQLite doesn't auto parse JSON
-            if isinstance(data, STR_TYPE):
-                data = json.loads(data)
+            if isinstance(data, util.STR_TYPE):
+                data = util.json.loads(data)
             cls.parse_nested(instance, field, nested, data)
 
     def __iter__(self):
@@ -104,23 +89,33 @@ class IncludeQuerySet(models.QuerySet):
         # Not sure why Django didn't make this a class level variable w/e
         self._iterable_class = IncludeModelIterable
 
-    def include(self, *related_names, **kwargs):
+    def include(self, *fields, **kwargs):
+        """
+        Return a new QuerySet instance that will include related objects.
+
+        If fields are specified, they must be non-hidden relationships.
+
+        If select_related(None) is called, clear the list.
+        """
         clone = self._clone()
 
         clone._include_limit = kwargs.pop('limit_includes', None)
         assert not kwargs, '"limit_includes" is the only accepted kwargs. Eat your heart out 2.7'
 
-        if related_names == (None, ):
+        # Copy the behavior of .select_related(None)
+        if fields == (None, ):
             clone._includes.clear()
             return clone
 
         # Parse everything the way django handles joins/select related
         # Including multiple child fields ie .include(field1__field2, field1__field3)
         # turns into {field1: {field2: {}, field3: {}}
-        for name in related_names:
+        for name in fields:
             ctx, model = self._includes, self.model
             for spl in name.split('__'):
                 field = model._meta.get_field(spl)
+                if isinstance(field, ForeignObjectRel) and field.is_hidden():
+                    raise ValueError('Hidden field "{!r}" has no descriptor and therefore cannot be included'.format(field))
                 model = field.related_model
                 ctx = ctx.setdefault(field, OrderedDict())
 
@@ -129,6 +124,11 @@ class IncludeQuerySet(models.QuerySet):
 
         return clone
 
+    def count(self):
+        clone = self._clone()
+        clone.query._annotations = None
+        return super(IncludeQuerySet, clone).count()
+
     def _clone(self):
         clone = super(IncludeQuerySet, self)._clone()
         clone._includes = self._includes
@@ -136,78 +136,4 @@ class IncludeQuerySet(models.QuerySet):
 
     def _include(self, field):
         self.query.get_initial_alias()
-        sql, params = self._build_include_sql(field, self._includes[field], self.query)
-        # Use add_extra to avoid a pointless call to _clone
-        # For some reason it doesn't take keywords...
-        self.query.add_extra({'__' + field.name: sql}, params, None, None, None, None)
-
-    def _build_include_sql(self, field, children, host_query):
-        host_model = field.model
-        model = field.related_model
-
-        # join_columns on generic relations are backwards
-        # Probably a reason/ better way to handle this
-        if isinstance(field, GenericRelation):
-            column, host_column = field.get_joining_columns()[0]
-        else:
-            host_column, column = field.get_joining_columns()[0]
-
-        qs = model.objects.all()
-
-        # Django's queries are amazing lazy. Calling get_initial_alias() seems
-        # to be the fastest way to populate the internal alias structures so we can avoid any overlap
-        # This all needs to happen before anything else, otherwise the aliases will get out of sync
-        # and they queries could either break or return the wrong data
-        qs.query.get_initial_alias()
-        # bump_prefix will effectively place this query's aliases into their own namespace
-        # No need to worry about conflicting includes
-        qs.query.bump_prefix(host_query)
-
-        table = qs.query.get_compiler(using=self.db).quote_name_unless_alias(qs.query.get_initial_alias())
-        host_table = host_query.get_compiler(using=self.db).quote_name_unless_alias(host_query.get_initial_alias())
-
-        # TODO be able to set limits per thing included
-        if self._include_limit:
-            qs.query.set_limits(0, self._include_limit)
-
-        # Any ordering needs to be plucked from the query set and added into the JSONAgg that we will be build
-        # because SQL
-        kwargs = {}
-        if qs.ordered:
-            kwargs['order_by'] = next(zip(*qs.query.get_compiler(using=self.db).get_order_by()))
-        qs.query.clear_ordering(True)
-
-        where = ['{table}."{column}" = {host_table}."{host_column}"'.format(
-            table=table,
-            column=column,
-            host_table=host_table,
-            host_column=host_column,
-        )]
-
-        if isinstance(field, GenericRelation):
-            # Add the additional content type filter for GFKs
-            where.append('{table}."{content_type}" = {content_type_id}'.format(
-                table=table,
-                content_type=model._meta.get_field(field.content_type_field_name).column,
-                content_type_id=ContentType.objects.get_for_model(host_model).pk
-            ))
-
-        qs.query.add_extra(None, None, where, None, None, None)
-
-        expressions = [f.column for f in model._meta.concrete_fields]
-
-        for item in children.items():
-            item = item + (qs.query, )
-            expressions.append(RawSQL(*self._build_include_sql(*item)))
-
-        agg = JSONBuildArray(*expressions)
-
-        # many_to_one is a bit of a misnomer, the field we have is the "one" side
-        if not field.many_to_one:
-            agg = JSONAgg(agg, **kwargs)
-
-        qs.query.add_annotation(agg, '__fields', is_summary=True)
-
-        qs = qs.values_list('__fields')
-
-        return qs.query.sql_with_params()
+        self.query.add_annotation(IncludeExpression(field, self._includes[field]), '__{}'.format(field.name), is_summary=False)

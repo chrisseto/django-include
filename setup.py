@@ -41,10 +41,11 @@ setup(
     ],
     keywords=('django', 'postgres', 'sql', 'optimization', 'performance'),
     install_requires=[
-        'ujson',
         'psycopg2',
-        'ciso8601',
     ],
+    extras_require={
+        'faster': ['ujson', 'ciso8601']
+    },
     classifiers=[
         'Operating System :: OS Independent',
         'Programming Language :: Python',
