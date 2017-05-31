@@ -34,7 +34,7 @@ Attach ``IncludeManager`` to a model:
 
 .. code-block:: python
 
-  from include import IncludeMaager
+  from include import IncludeManager
 
   class BlogPost(models.Model):
       objects = IncludeManager()

@@ -91,6 +91,9 @@ class TestManyToOne:
             for i, cat in enumerate(models.Cat.objects.include('archetype', 'parent__archetype').filter(archetype__num_toes=5)):
                 assert cat.archetype.num_toes == 5
                 assert cat.parent.archetype.num_toes == 3
+                assert cat.parent_id == cat.parent.id
+                assert cat.archetype_id == cat.archetype.id
+                assert cat.parent.archetype_id == cat.parent.archetype.id
 
 
 @pytest.mark.django_db
@@ -146,9 +149,74 @@ class TestOneToMany:
         assert models.Cat.objects.include('children__children').filter(parent__isnull=True).count() == 10
 
 
-@pytest.mark.skip
+@pytest.mark.django_db
 class TestManyToMany:
-    pass
+
+    def test_include(self, django_assert_num_queries):
+        cat1 = factories.CatFactory()
+        siblings = factories.CatFactory.create_batch(5)
+        cat1.siblings.add(*siblings)
+
+        with django_assert_num_queries(1):
+            cat = models.Cat.objects.filter(id=cat1.id).include('siblings').first()
+            for sib in cat.siblings.all():
+                assert sib in siblings
+            assert len(cat.siblings.all()) == 5
+
+    def test_filter(self, django_assert_num_queries):
+        cat1 = factories.CatFactory()
+        siblings = factories.CatFactory.create_batch(3, name='Henry')
+        siblings += factories.CatFactory.create_batch(2, name='George')
+        cat1.siblings.add(*siblings)
+
+        # If .filter is called, our cache is invalid and must be ignored
+        with django_assert_num_queries(4):
+            cat = models.Cat.objects.filter(id=cat1.id).include('siblings').first()
+            for sib in cat.siblings.filter():
+                assert sib in siblings
+
+            for sib in cat.siblings.filter(name='Henry'):
+                assert sib.name == 'Henry'
+                assert sib in siblings[:3]
+
+            for sib in cat.siblings.filter(name='George'):
+                assert sib.name == 'George'
+                assert sib in siblings[3:]
+
+            assert len(cat.siblings.all()) == 5
+
+    def test_include_many(self, django_assert_num_queries):
+        cats = factories.CatFactory.create_batch(10)
+        sibs = []
+        for cat in cats:
+            sibs.append(factories.CatFactory.create_batch(5))
+            cat.siblings.add(*sibs[-1])
+
+        with django_assert_num_queries(1):
+            for cat, siblings in zip(models.Cat.objects.filter(id__in=[x.id for x in cats]).include('siblings'), sibs):
+                for included, created in zip(cat.siblings.all(), siblings):
+                    assert included == created
+                assert len(cat.siblings.all()) == 5
+
+    def test_nested(self, django_assert_num_queries):
+        cat1 = factories.CatFactory()
+        cat1.siblings.add(*factories.CatFactory.create_batch(3))
+        for sib in cat1.siblings.all():
+            sib.siblings.add(*factories.CatFactory.create_batch(2))
+
+        with django_assert_num_queries(1):
+            cat1_i = models.Cat.objects.include('siblings__siblings').filter(id=cat1.id).first()
+            assert len(cat1_i.siblings.all()) == 3
+            for sib in cat1_i.siblings.all():
+                assert len(sib.siblings.all()) == 2
+
+    def test_hidden_fields(self):
+        with pytest.raises(ValueError) as e:
+            models.Cat.objects.include('Cat_siblings+')
+        assert e.value.args == (
+            'Hidden field "{!r}" has no descriptor '
+            'and therefore cannot be included'.format(models.Cat._meta.get_field('Cat_siblings+')),
+        )
 
 
 @pytest.mark.skip

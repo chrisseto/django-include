@@ -10,7 +10,7 @@ sudo: false
 
 env:
   global:
-    - POSTGRES_DEB="postgresql-9.6_9.6.2-1.pgdg12.4+1_amd64.deb"
+    - POSTGRES_DEB="postgresql-9.6_9.6.3-1.pgdg12.4+1_amd64.deb"
       # Need to run on non-default port; otherwise we use Travis's default
       # postgres installation
     - DATABASE_PORT="54321"
