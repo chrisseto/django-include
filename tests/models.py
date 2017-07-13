@@ -29,6 +29,7 @@ class Cat(models.Model):
     archetype = models.ForeignKey(Archetype)
     name = models.CharField(max_length=50)
     parent = models.ForeignKey('Cat', null=True, related_name='children')
-    siblings = models.ManyToManyField('Cat')
+    siblings = models.ManyToManyField('Cat', related_name='related_to')
+    emergency_contact = models.OneToOneField('Cat', null=True, related_name='emergency_contact_for')
 
     objects = IncludeManager()

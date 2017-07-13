@@ -219,9 +219,43 @@ class TestManyToMany:
         )
 
 
-@pytest.mark.skip
+@pytest.mark.django_db
 class TestOneToOne:
-    pass
+
+    def test_include(self, django_assert_num_queries):
+        cats = factories.CatFactory.create_batch(5)
+
+        for cat in cats:
+            factories.CatFactory(emergency_contact=cat)
+
+        with django_assert_num_queries(1):
+            for cat in models.Cat.objects.filter(emergency_contact__isnull=False).include('emergency_contact__emergency_contact_for'):
+                assert cat.emergency_contact is not None
+                assert cat.emergency_contact.emergency_contact_for.id == cat.id
+                assert isinstance(cat.emergency_contact, models.Cat)
+                assert cat.emergency_contact.id != cat.id
+
+        with django_assert_num_queries(1):
+            for cat in models.Cat.objects.filter(emergency_contact__isnull=True).include('emergency_contact'):
+                assert cat.emergency_contact is None
+
+    def test_reverse(self, django_assert_num_queries):
+        cats = factories.CatFactory.create_batch(5)
+
+        for cat in cats:
+            factories.CatFactory(emergency_contact=cat)
+
+        with django_assert_num_queries(1):
+            for cat in models.Cat.objects.filter(emergency_contact__isnull=False).include('emergency_contact_for'):
+                with pytest.raises(models.Cat.DoesNotExist):
+                    assert cat.emergency_contact_for is None
+
+        with django_assert_num_queries(1):
+            for cat in models.Cat.objects.filter(emergency_contact__isnull=True).include('emergency_contact_for__emergency_contact'):
+                assert cat.emergency_contact_for is not None
+                assert isinstance(cat.emergency_contact_for, models.Cat)
+                assert cat.emergency_contact_for.emergency_contact.id == cat.id
+                assert cat.emergency_contact_for != cat.id
 
 
 @pytest.mark.skip

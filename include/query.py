@@ -16,7 +16,7 @@ class IncludeModelIterable(ModelIterable):
 
     @classmethod
     def parse_nested(cls, instance, field, nested, datas):
-        if field.many_to_one:
+        if field.many_to_one or field.one_to_one:
             datas = (datas, )
         ps = []
 
@@ -45,7 +45,7 @@ class IncludeModelIterable(ModelIterable):
 
             ps.append(parsed)
 
-        if field.many_to_one and ps:
+        if (field.many_to_one or field.one_to_one) and ps:
             return setattr(instance, field.get_cache_name(), ps[0])
 
         if not hasattr(instance, '_prefetched_objects_cache'):
