@@ -275,3 +275,11 @@ class TestGenericForeignKey:
         with django_assert_num_queries(1):
             ket = models.Cat.objects.include('aliases').get(pk=cat.id)
             assert len(ket.aliases.all()) == 7
+
+    def test_chaining(self, django_assert_num_queries):
+        cat = factories.CatFactory()
+
+        qs1 = cat.organizations.all().filter(members__active=False).include('members')
+        qs2 = cat.organizations.all().include('members').filter(members__active=False)
+
+        assert str(qs1.query) == str(qs2.query)
