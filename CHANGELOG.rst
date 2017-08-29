@@ -1,6 +1,10 @@
 Changelog
 ---------
 
+0.2.2 (2017-08-29)
+++++++++++++++++++
+* Appropriately handle `.filter_is_sticky`
+
 0.2.1 (2017-07-13)
 ++++++++++++++++++
 * Recognize OneToOne fields as singular related fields
