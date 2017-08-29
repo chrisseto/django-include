@@ -99,6 +99,13 @@ class IncludeQuerySet(models.QuerySet):
         """
         clone = self._clone()
 
+        # Preserve the stickiness of related querysets
+        # NOTE: by default _clone will clear this attribute
+        # .include does not modify the actual query, so we
+        # should not clear `filter_is_sticky`
+        if self.query.filter_is_sticky:
+            clone.query.filter_is_sticky = True
+
         clone._include_limit = kwargs.pop('limit_includes', None)
         assert not kwargs, '"limit_includes" is the only accepted kwargs. Eat your heart out 2.7'
 
@@ -111,7 +118,7 @@ class IncludeQuerySet(models.QuerySet):
         # Including multiple child fields ie .include(field1__field2, field1__field3)
         # turns into {field1: {field2: {}, field3: {}}
         for name in fields:
-            ctx, model = self._includes, self.model
+            ctx, model = clone._includes, clone.model
             for spl in name.split('__'):
                 field = model._meta.get_field(spl)
                 if isinstance(field, ForeignObjectRel) and field.is_hidden():
@@ -119,7 +126,7 @@ class IncludeQuerySet(models.QuerySet):
                 model = field.related_model
                 ctx = ctx.setdefault(field, OrderedDict())
 
-        for field in self._includes.keys():
+        for field in clone._includes.keys():
             clone._include(field)
 
         return clone
@@ -131,7 +138,11 @@ class IncludeQuerySet(models.QuerySet):
 
     def _clone(self):
         clone = super(IncludeQuerySet, self)._clone()
-        clone._includes = self._includes
+
+        clone._includes = self._includes.copy()
+        for field in self._includes.keys():
+            clone._include(field)
+
         return clone
 
     def _include(self, field):

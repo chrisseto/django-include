@@ -174,6 +174,8 @@ class ManyToManyConstructor(ManyToOneConstructor):
 
 
 class IncludeExpression(Expression):
+    # No need to use group bys when using .include
+    contains_aggregate = False
 
     def __init__(self, field, children=None):
         expressions = []

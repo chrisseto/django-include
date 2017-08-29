@@ -31,5 +31,23 @@ class Cat(models.Model):
     parent = models.ForeignKey('Cat', null=True, related_name='children')
     siblings = models.ManyToManyField('Cat', related_name='related_to')
     emergency_contact = models.OneToOneField('Cat', null=True, related_name='emergency_contact_for')
+    organizations = models.ManyToManyField('Organization', through='Membership')
+
+    objects = IncludeManager()
+
+
+class Organization(models.Model):
+    title = models.CharField(max_length=75)
+    disliked = models.BooleanField(default=True)
+
+    objects = IncludeManager()
+
+
+class Membership(models.Model):
+    active = models.BooleanField(default=True)
+    joined = models.DateTimeField(auto_now_add=True)
+
+    organization = models.ForeignKey(Organization, related_name='members')
+    member = models.ForeignKey(Cat, related_name='memberships')
 
     objects = IncludeManager()
