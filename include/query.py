@@ -1,3 +1,4 @@
+import copy
 from collections import OrderedDict
 
 from django.utils.six.moves import zip
@@ -131,18 +132,9 @@ class IncludeQuerySet(models.QuerySet):
 
         return clone
 
-    def count(self):
-        clone = self._clone()
-        clone.query._annotations = None
-        return super(IncludeQuerySet, clone).count()
-
     def _clone(self):
         clone = super(IncludeQuerySet, self)._clone()
-
-        clone._includes = self._includes.copy()
-        for field in self._includes.keys():
-            clone._include(field)
-
+        clone._includes = copy.deepcopy(self._includes)
         return clone
 
     def _include(self, field):

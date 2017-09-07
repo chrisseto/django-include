@@ -1,5 +1,9 @@
 import pytest
 
+from django.db.models import Count
+from django.db.models import OuterRef
+from django.db.models import Subquery
+
 from tests import models
 from tests import factories
 
@@ -13,16 +17,18 @@ class TestQuerySet:
         assert len(models.Cat.objects.include().all()) == 10
         assert models.Cat.objects.include().all().count() == 10
 
-    # def test_annotate(self, django_assert_num_queries):
-    #     for _ in range(3):
-    #         parent = factories.CatFactory()
-    #         for _ in range(10):
-    #             factories.CatFactory(parent=parent)
-    #     qs = models.Cat.objects.include('children').annotate(num_childern=Count('children'))
-    #     import ipdb; ipdb.set_trace()
-    #     with django_assert_num_queries(1):
-    #         for cat in models.Cat.objects.include('children').annotate(num_childern=Count('children')):
-    #             assert cat.num_childern == len(cat.children.all())
+    def test_values(self):
+        qs = models.Cat.objects.include('archetype')
+        list(qs.filter(id__in=Subquery(qs.filter(id=OuterRef('pk')).values('pk'))))
+
+    def test_annotate(self, django_assert_num_queries):
+        for _ in range(3):
+            parent = factories.CatFactory()
+            for _ in range(10):
+                factories.CatFactory(parent=parent)
+        with django_assert_num_queries(1):
+            for cat in models.Cat.objects.include('children').annotate(num_childern=Count('children')):
+                assert cat.num_childern == len(cat.children.all())
 
 
 @pytest.mark.django_db
