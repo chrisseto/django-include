@@ -2,6 +2,10 @@
 Django Include
 **************
 
+.. image:: https://badge.fury.io/py/django-include.svg
+    :target: http://badge.fury.io/py/django-include
+    :alt: Latest version
+
 .. image:: https://travis-ci.org/chrisseto/django-include.svg?branch=master
     :target: https://travis-ci.org/chrisseto/django-include
 
