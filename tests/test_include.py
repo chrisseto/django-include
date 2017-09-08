@@ -1,8 +1,13 @@
 import pytest
 
 from django.db.models import Count
-from django.db.models import OuterRef
-from django.db.models import Subquery
+try:
+    from django.db.models import OuterRef
+    from django.db.models import Subquery
+except ImportError:  # Django < 1.11
+    HAS_SUBQUERIES = False
+else:
+    HAS_SUBQUERIES = True
 
 from tests import models
 from tests import factories
@@ -17,6 +22,7 @@ class TestQuerySet:
         assert len(models.Cat.objects.include().all()) == 10
         assert models.Cat.objects.include().all().count() == 10
 
+    @pytest.mark.skipif(not HAS_SUBQUERIES, reason='Subqueries not supported on older Django versions')
     def test_values(self):
         qs = models.Cat.objects.include('archetype')
         list(qs.filter(id__in=Subquery(qs.filter(id=OuterRef('pk')).values('pk'))))
