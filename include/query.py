@@ -112,6 +112,8 @@ class IncludeQuerySet(models.QuerySet):
 
         # Copy the behavior of .select_related(None)
         if fields == (None, ):
+            for field in clone._includes.keys():
+                clone.query._annotations.pop('__{}'.format(field.name), None)
             clone._includes.clear()
             return clone
 

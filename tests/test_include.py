@@ -22,6 +22,43 @@ class TestQuerySet:
         assert len(models.Cat.objects.include().all()) == 10
         assert models.Cat.objects.include().all().count() == 10
 
+    def test_none(self, django_assert_num_queries):
+        archetype = factories.ArchetypeFactory(color='Calico', num_toes=6)
+        factories.CatFactory(archetype=archetype)
+
+        with django_assert_num_queries(1):
+            for cat in models.Cat.objects.include('archetype'):
+                assert cat.archetype == archetype
+                assert cat.archetype.num_toes == 6
+                assert cat.archetype.color == 'Calico'
+
+        with django_assert_num_queries(2):
+            for cat in models.Cat.objects.include(None):
+                assert cat.archetype == archetype
+                assert cat.archetype.num_toes == 6
+                assert cat.archetype.color == 'Calico'
+
+        with django_assert_num_queries(1):
+            for cat in models.Cat.objects.include(None).include('archetype'):
+                assert cat.archetype == archetype
+                assert cat.archetype.num_toes == 6
+                assert cat.archetype.color == 'Calico'
+
+        with django_assert_num_queries(2):
+            for cat in models.Cat.objects.include('archetype').include(None):
+                assert cat.archetype == archetype
+                assert cat.archetype.num_toes == 6
+                assert cat.archetype.color == 'Calico'
+
+    def test_none_with_annotate(self):
+        for _ in range(2):
+            parent = factories.CatFactory()
+            for _ in range(2):
+                factories.CatFactory(parent=parent)
+
+        for cat in models.Cat.objects.include('children').annotate(num_children=Count('children')).include(None):
+            assert cat.num_children == len(cat.children.all())
+
     @pytest.mark.skipif(not HAS_SUBQUERIES, reason='Subqueries not supported on older Django versions')
     def test_values(self):
         qs = models.Cat.objects.include('archetype')
