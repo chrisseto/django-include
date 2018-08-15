@@ -15,9 +15,12 @@ env:
       # postgres installation
     - DATABASE_PORT="54321"
   matrix:
+    - DJANGO=1.x
+    - DJANGO=2.x
     - DJANGO=1.9
     - DJANGO=1.10
-    - DJANGO=1.11
+    - DJANGO=2.0
+    - DJANGO=2.1
 
 install:
   - travis_retry pip install -U virtualenv tox tox-travis
