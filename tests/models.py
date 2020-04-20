@@ -7,7 +7,7 @@ from include import IncludeManager
 
 
 class Alias(models.Model):
-    content_type = models.ForeignKey(ContentType, null=True, blank=True)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
     describes = GenericForeignKey()
     name = models.CharField(max_length=32)
     object_id = models.PositiveIntegerField(null=True, blank=True)
@@ -26,11 +26,11 @@ class Archetype(models.Model):
 
 class Cat(models.Model):
     aliases = GenericRelation(Alias)
-    archetype = models.ForeignKey(Archetype)
+    archetype = models.ForeignKey(Archetype, on_delete=models.CASCADE)
     name = models.CharField(max_length=50)
-    parent = models.ForeignKey('Cat', null=True, related_name='children')
+    parent = models.ForeignKey('Cat', on_delete=models.CASCADE, null=True, related_name='children')
     siblings = models.ManyToManyField('Cat', related_name='related_to')
-    emergency_contact = models.OneToOneField('Cat', null=True, related_name='emergency_contact_for')
+    emergency_contact = models.OneToOneField('Cat', on_delete=models.CASCADE, null=True, related_name='emergency_contact_for')
     organizations = models.ManyToManyField('Organization', through='Membership')
 
     objects = IncludeManager()
@@ -47,7 +47,29 @@ class Membership(models.Model):
     active = models.BooleanField(default=True)
     joined = models.DateTimeField(auto_now_add=True)
 
-    organization = models.ForeignKey(Organization, related_name='members')
-    member = models.ForeignKey(Cat, related_name='memberships')
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='members')
+    member = models.ForeignKey(Cat, on_delete=models.CASCADE, related_name='memberships')
+
+    objects = IncludeManager()
+
+
+class Author(models.Model):
+    name = models.TextField()
+
+    objects = IncludeManager()
+
+
+class Post(models.Model):
+    title = models.TextField()
+
+    authors = models.ManyToManyField(Author)
+
+    objects = IncludeManager()
+
+
+class Comment(models.Model):
+    content = models.TextField()
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)
 
     objects = IncludeManager()
