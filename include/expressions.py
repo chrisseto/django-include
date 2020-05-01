@@ -5,7 +5,6 @@ from django.db.models import Expression
 from django.db.models.expressions import Func
 from django.db.models.sql.constants import LOUTER
 from django.db.models.sql.datastructures import Join
-from django.utils.six.moves import zip
 
 from include.aggregations import JSONAgg
 
@@ -172,6 +171,43 @@ class ManyToManyConstructor(ManyToOneConstructor):
         return queryset
 
 
+class ReverseManyToManyConstructor(ManyToOneConstructor):
+
+    @property
+    def through_model(self):
+        return self.field.through
+
+    @property
+    def from_field(self):
+        return self.through_model._meta.get_field(self.field.field.m2m_reverse_field_name()).remote_field
+
+    @property
+    def to_field(self):
+        return self.through_model._meta.get_field(self.field.field.m2m_field_name()).remote_field
+
+    def add_where(self, queryset, host_table, included_table):
+        alias = None
+        nullable = True
+        join = Join(self.through_model._meta.db_table, included_table, None, LOUTER, self.to_field, nullable)
+
+        alias, _ = queryset.query.table_alias(join.table_name, create=True)
+        join.table_alias = alias
+        queryset.query.alias_map[alias] = join
+
+        where = [
+            '{through_table}."{from_column}" = {host_table}."{host_column}"'.format(
+                through_table=join.table_alias,
+                from_column=self.from_field.field.column,
+                host_table=host_table,
+                host_column=self.from_field.target_field.column
+            )
+        ]
+
+        queryset.query.add_extra(None, None, where, None, None, None)
+
+        return queryset
+
+
 class IncludeExpression(Expression):
     # No need to use group bys when using .include
     contains_aggregate = True
@@ -184,7 +220,10 @@ class IncludeExpression(Expression):
         if isinstance(field, GenericRelation):
             self._constructor = GenericRelationConstructor(field, expressions)
         elif getattr(field, 'many_to_many', False):
-            self._constructor = ManyToManyConstructor(field, expressions)
+            if field.auto_created:
+                self._constructor = ReverseManyToManyConstructor(field, expressions)
+            else:
+                self._constructor = ManyToManyConstructor(field, expressions)
         elif getattr(field, 'multiple', False):
             self._constructor = ManyToOneConstructor(field, expressions)
         else:

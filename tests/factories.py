@@ -1,7 +1,7 @@
 import factory
 from factory.django import DjangoModelFactory
 
-from tests.models import Cat, Alias, Archetype
+from tests.models import Cat, Alias, Archetype, Post, Comment, Author
 
 
 class AliasFactory(DjangoModelFactory):
@@ -25,3 +25,24 @@ class CatFactory(DjangoModelFactory):
 
     class Meta:
         model = Cat
+
+
+class PostFactory(DjangoModelFactory):
+    title = factory.Faker('sentence')
+
+    class Meta:
+        model = Post
+
+
+class AuthorFactory(DjangoModelFactory):
+    name = factory.Faker('name')
+
+    class Meta:
+        model = Author
+
+
+class CommentFactory(DjangoModelFactory):
+    content = factory.Faker('sentence')
+
+    class Meta:
+        model = Comment
