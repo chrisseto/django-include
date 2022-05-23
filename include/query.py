@@ -1,7 +1,7 @@
 import copy
 from collections import OrderedDict
 
-from django.utils.six.moves import zip
+from six import zip
 from django.db import models
 from django.db.models.query import ModelIterable
 from django.db.models.fields.reverse_related import ForeignObjectRel

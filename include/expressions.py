@@ -5,7 +5,7 @@ from django.db.models import Expression
 from django.db.models.expressions import Func
 from django.db.models.sql.constants import LOUTER
 from django.db.models.sql.datastructures import Join
-from django.utils.six.moves import zip
+from six.moves import zip
 
 from include.aggregations import JSONAgg
 
