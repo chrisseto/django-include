@@ -332,3 +332,37 @@ class TestGenericForeignKey:
         qs2 = cat.organizations.all().include('members').filter(members__active=False)
 
         assert str(qs1.query) == str(qs2.query)
+
+
+@pytest.mark.django_db
+class TestGeneratedAccessors:
+
+    def test_m2m_nested(self, django_assert_num_queries):
+        for _ in range(5):
+            post = factories.PostFactory()
+            post.authors.set(factories.AuthorFactory.create_batch(5))
+
+        with django_assert_num_queries(1):
+            for post in models.Post.objects.include('authors__post_set'):
+                for author in post.authors.all():
+                    assert len(author.post_set.all()) == 1
+
+    def test_m2m(self, django_assert_num_queries):
+        for _ in range(5):
+            post = factories.PostFactory()
+            post.authors.set(factories.AuthorFactory.create_batch(5))
+            factories.CommentFactory(author=factories.AuthorFactory(), post=post)
+
+        with django_assert_num_queries(1):
+            for post in models.Post.objects.include('authors'):
+                assert len(post.authors.all()) == 5
+
+        with django_assert_num_queries(1):
+            for post in models.Post.objects.include('comment_set__author__post_set'):
+                for comment in post.comment_set.all():
+                    assert len(comment.author.post_set.all()) == 0
+
+        with django_assert_num_queries(1):
+            for post in models.Post.objects.include('authors__comment_set'):
+                for author in post.authors.all():
+                    assert len(author.comment_set.all()) == 0

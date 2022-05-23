@@ -1,7 +1,6 @@
 import copy
 from collections import OrderedDict
 
-from six import zip
 from django.db import models
 from django.db.models.query import ModelIterable
 from django.db.models.fields.reverse_related import ForeignObjectRel
@@ -41,13 +40,14 @@ class IncludeModelIterable(ModelIterable):
             for (f, n), d in zip(nested.items(), nested_data):
                 cls.parse_nested(parsed, f, n, d)
 
-            if field.remote_field.concrete:
+            if field.remote_field.concrete and not field.many_to_many:
                 setattr(parsed, field.remote_field.get_cache_name(), instance)
 
             ps.append(parsed)
 
         if (field.many_to_one or field.one_to_one) and ps:
-            return setattr(instance, field.get_cache_name(), ps[0])
+            instance._state.fields_cache[field.get_cache_name()] = ps[0]
+            return
 
         if not hasattr(instance, '_prefetched_objects_cache'):
             instance._prefetched_objects_cache = {}
@@ -57,10 +57,15 @@ class IncludeModelIterable(ModelIterable):
         else:
             accessor_name = field.name
 
+        if field.many_to_many:
+            prefetch_cache_name = getattr(instance, accessor_name).prefetch_cache_name
+        else:
+            prefetch_cache_name = accessor_name
+
         # get_queryset() sets a bunch of attributes for us and will respect any custom managers
-        instance._prefetched_objects_cache[field.name] = getattr(instance, accessor_name).get_queryset()
-        instance._prefetched_objects_cache[field.name]._result_cache = ps
-        instance._prefetched_objects_cache[field.name]._prefetch_done = True
+        instance._prefetched_objects_cache[prefetch_cache_name] = getattr(instance, accessor_name).get_queryset()
+        instance._prefetched_objects_cache[prefetch_cache_name]._result_cache = ps
+        instance._prefetched_objects_cache[prefetch_cache_name]._prefetch_done = True
 
     @classmethod
     def parse_includes(cls, instance, fields):
@@ -113,7 +118,7 @@ class IncludeQuerySet(models.QuerySet):
         # Copy the behavior of .select_related(None)
         if fields == (None, ):
             for field in clone._includes.keys():
-                clone.query._annotations.pop('__{}'.format(field.name), None)
+                clone.query.annotations.pop('__{}'.format(field.name), None)
             clone._includes.clear()
             return clone
 
@@ -123,7 +128,7 @@ class IncludeQuerySet(models.QuerySet):
         for name in fields:
             ctx, model = clone._includes, clone.model
             for spl in name.split('__'):
-                field = model._meta.get_field(spl)
+                field = util.get_field(model, spl)
                 if isinstance(field, ForeignObjectRel) and field.is_hidden():
                     raise ValueError('Hidden field "{!r}" has no descriptor and therefore cannot be included'.format(field))
                 model = field.related_model

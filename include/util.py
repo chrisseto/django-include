@@ -1,7 +1,11 @@
+from django.db.models import FieldDoesNotExist
 from django.utils import dateparse
+from psycopg2 import extras
 
 try:
     import ujson as json
+
+    extras.register_default_json(loads=json.loads)
 except ImportError:
     import json  # noqa
 
@@ -25,3 +29,15 @@ def parse_datetime(s):
         return ciso8601.parse_datetime(s)
 
     return dateparse.parse_datetime(s)
+
+
+def get_field(model, fieldname):
+    try:
+        return model._meta.get_field(fieldname)
+    except FieldDoesNotExist:
+        for field in model._meta.get_fields():
+            if not hasattr(field, 'get_accessor_name'):
+                continue
+            if field.get_accessor_name() == fieldname:
+                return field
+        raise

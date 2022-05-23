@@ -2,9 +2,9 @@ language: python
 sudo: false
 
 python:
+  - "3.8"
   - "3.6"
   - "3.5"
-  - "2.7"
 
 env:
   global:
@@ -13,10 +13,8 @@ env:
       # postgres installation
     - DATABASE_PORT="54321"
   matrix:
-    - DJANGO=1.9
-    - DJANGO=1.10
-    - DJANGO=1.11
-    - DJANGO=2.0.13
+    - DJANGO=2.0
+    - DJANGO=2.1
 
 install:
   - travis_retry pip install -U virtualenv tox tox-travis
