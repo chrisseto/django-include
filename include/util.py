@@ -1,4 +1,4 @@
-from django.db.models import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist
 from django.utils import dateparse
 from psycopg2 import extras
 

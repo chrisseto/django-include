@@ -16,8 +16,6 @@ class IncludeModelIterable(ModelIterable):
 
     @classmethod
     def parse_nested(cls, instance, field, nested, datas):
-        if field.many_to_one or field.one_to_one:
-            datas = (datas, )
         ps = []
 
         # Fun caveat of throwing everything into JSON, it doesn't support datetimes. Everything gets sent back as iso8601 strings
@@ -35,7 +33,7 @@ class IncludeModelIterable(ModelIterable):
                 data[i] = util.parse_datetime(data[i])
 
             # from_db expects the final argument to be a tuple of fields in the order of concrete_fields
-            parsed = field.related_model.from_db(instance._state.db, None, data)
+            parsed = field.related_model.from_db(instance._state.db, [], data)
 
             for (f, n), d in zip(nested.items(), nested_data):
                 cls.parse_nested(parsed, f, n, d)
@@ -63,9 +61,11 @@ class IncludeModelIterable(ModelIterable):
             prefetch_cache_name = accessor_name
 
         # get_queryset() sets a bunch of attributes for us and will respect any custom managers
-        instance._prefetched_objects_cache[prefetch_cache_name] = getattr(instance, accessor_name).get_queryset()
-        instance._prefetched_objects_cache[prefetch_cache_name]._result_cache = ps
-        instance._prefetched_objects_cache[prefetch_cache_name]._prefetch_done = True
+        accessor = getattr(instance, accessor_name)
+        if accessor:
+            instance._prefetched_objects_cache[prefetch_cache_name] = accessor.get_queryset()
+            instance._prefetched_objects_cache[prefetch_cache_name]._result_cache = ps
+            instance._prefetched_objects_cache[prefetch_cache_name]._prefetch_done = True
 
     @classmethod
     def parse_includes(cls, instance, fields):

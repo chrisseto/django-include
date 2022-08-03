@@ -1,19 +1,19 @@
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.fields import JSONField
+
 from django.db.models import Expression
 from django.db.models.expressions import Func
 from django.db.models.sql.constants import LOUTER
 from django.db.models.sql.datastructures import Join
 
-from include.aggregations import JSONAgg
+from include.aggregations import JSONAgg, IncludeJSONField
 
 
 class JSONBuildArray(Func):
     function = 'JSON_BUILD_ARRAY'
 
     def __init__(self, *args, **kwargs):
-        super(JSONBuildArray, self).__init__(*args, output_field=JSONField(), **kwargs)
+        super(JSONBuildArray, self).__init__(*args, output_field=IncludeJSONField(), **kwargs)
 
     def as_sqlite(self, compiler, connection, **extra_context):
         return self.as_sql(compiler, connection, function='JSON_ARRAY', **extra_context)
@@ -64,10 +64,6 @@ class IncludeExpressionConstructor(object):
     def as_sql(self, compiler):
         qs = self.get_queryset()
 
-        # bump_prefix will effectively place this query's aliases into their own namespace
-        # No need to worry about conflicting includes
-        qs.query.bump_prefix(compiler.query)
-
         table = qs.query.get_compiler(connection=compiler.connection).quote_name_unless_alias(qs.query.get_initial_alias())
         host_table = compiler.query.resolve_ref('pk').alias
 
@@ -76,6 +72,10 @@ class IncludeExpressionConstructor(object):
         #     qs.query.set_limits(0, self._include_limit)
 
         agg = self.build_aggregate(qs, compiler)
+
+        # Wrap JSONBuildArrays to return correct number of rows
+        if isinstance(agg, JSONBuildArray):
+            agg = JSONAgg(agg)
         self.add_where(qs, host_table, table)
 
         qs.query.add_annotation(agg, '__fields', is_summary=True)
@@ -229,7 +229,7 @@ class IncludeExpression(Expression):
         else:
             self._constructor = IncludeExpressionConstructor(field, expressions)
 
-        super(IncludeExpression, self).__init__(output_field=JSONField())
+        super(IncludeExpression, self).__init__(output_field=IncludeJSONField())
 
     def as_sql(self, compiler, connection, template=None):
         return self._constructor.as_sql(compiler)
