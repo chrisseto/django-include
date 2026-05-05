@@ -2,7 +2,7 @@ invoke==0.15.0
 
 # Testing
 pytest-benchmark==3.0.0
-pytest==3.8.0
+pytest==9.0.3
 pytest-django==3.4.3
 factory-boy==2.7.0
 fake-factory==0.7.2
